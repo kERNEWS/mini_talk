@@ -3,29 +3,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../libft/libft.h"
-
+struct sigaction	s_sigaction;
 void handle_signal(int signal)
 {
 
     static unsigned int bit_count;
     static char c;
 
-    c |= (signal == SIGUSR2);
+    if (bit_count < 8)
+        c = c << 1;
+    if (SIGUSR2 == signal)
+        c |= 1;
+        
     bit_count++;
+    printf("sig received\n");
     if (bit_count == 8)
     {
         if (c == '\0')
             printf("\n");
         else
         {
-            printf("%c", c);
+            write(1, &c, 1);
+            write(1, "\n", 1);
         }
         bit_count = 0;
         c = 0;
     }
-    else
-        c = c << 1;
-
 }
 
 int main(void)
