@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../libft/libft.h"
+
+volatile int ack_received;
+
 static int	is_space(char c)
 {
 	if (c == ' ' || (c >= '\t' && c <= '\r'))
@@ -45,13 +48,40 @@ int	ft_atoi(const char *nptr)
 	return (res);
 }
 
+void wait_for_server(int signum)
+{
+	(void)signum;
+	ack_received = 1;
+}
+
+void send_message(char c, int pid)
+{
+	int i;
+	unsigned char temp;
+
+	i = 8;
+	while (i > 0)
+	{
+		i--;
+		temp = (c >> i) & 1;
+		if (temp == 1)
+			kill(pid, SIGUSR2);
+		else
+			kill(pid, SIGUSR1);
+		ack_received = 0;
+		while(ack_received == 0)
+			pause();
+	}
+}
+
 int main (int argc, char *argv[])
 {
+	struct sigaction ack;
     char *message;
     __pid_t PID;
+	int i;
 
-
-
+	i = 0;
     if (argc != 3)
     {
         printf("Usage:./client <PID> <Message>\n");
@@ -62,4 +92,16 @@ int main (int argc, char *argv[])
     printf("%s\n", message);
     printf("%i\n", PID);
 
+	ack.sa_handler = wait_for_server;
+	sigemptyset(&ack.sa_mask);
+	ack.sa_flags = 0;
+	sigaction(SIGUSR1, &ack, NULL);
+
+
+	while(message[i])
+	{
+		send_message(message[i], PID);
+		i++;
+	}
+	send_message('\0', PID);
 }
